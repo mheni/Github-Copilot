@@ -1,4 +1,4 @@
-# LAB 03 - Développer des fonctionnalités de code avec GitHub Copilot (Java)
+# LAB 01 - Développer des fonctionnalités de code avec GitHub Copilot (Java)
 
 ## Description
 Apprendre à utiliser GitHub Copilot pour développer des fonctionnalités complètes dans une application Java.
