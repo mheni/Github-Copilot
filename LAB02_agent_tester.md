@@ -61,7 +61,7 @@ In this section, you create a simple Maven project that the Unit Tester Agent wi
      -DgroupId=com.example \
      -DartifactId=calculator-app \
      -DarchetypeArtifactId=maven-archetype-quickstart \
-     -DarchetypeVersion=1.4 \
+     -DarchetypeVersion=1.5 \
      -DinteractiveMode=false
    ```
 
