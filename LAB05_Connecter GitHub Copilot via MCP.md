@@ -75,7 +75,7 @@ Vous pouvez passer par Spring Initializr (web) si vous préférez, mais ici on r
      -DgroupId=com.example \
      -DartifactId=mcp-todo-app \
      -DarchetypeArtifactId=maven-archetype-quickstart \
-     -DarchetypeVersion=1.4 \
+     -DarchetypeVersion=1.5 \
      -DinteractiveMode=false
    ```
 
