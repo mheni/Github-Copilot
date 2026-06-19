@@ -1,455 +1,446 @@
 ---
 lab:
-  title: "Labo - Connecter une application Java à GitHub Copilot via MCP dans VS Code"
-  description: "Découvrir le Model Context Protocol (MCP) en connectant une application Java Spring Boot à GitHub Copilot dans VS Code, principalement par configuration (MCP servers) plutôt que par codage complexe."
+  title: "Labo - Connecter une application Java Spring Boot à GitHub Copilot via MCP"
+  description: "Créer une application Spring Boot Java qui expose des actions métier comme outils MCP (Model Context Protocol), les connecter à GitHub Copilot dans VS Code et les invoquer en langage naturel."
   duration: "60-90 minutes"
 ---
 
-# Labo - Connecter une application Java à GitHub Copilot via MCP dans VS Code
+# Labo - Connecter une application Java Spring Boot à GitHub Copilot via MCP
 
 ## Objectif du labo
 
-Dans ce labo, vous allez découvrir comment **GitHub Copilot** peut consommer des services externes via le **Model Context Protocol (MCP)**, sans écrire beaucoup de code.
+Dans ce labo, vous allez découvrir comment **GitHub Copilot** peut consommer des services externes via le **Model Context Protocol (MCP)**.
 
-L’idée ici n’est pas de construire une application complexe, mais de :
+Vous allez :
 
-- Démarrer une petite application Java Spring Boot qui expose une API très simple.
-- La déclarer comme **serveur MCP** dans VS Code.
-- Utiliser GitHub Copilot (via le bouton “Open in Agents” et la configuration des MCP servers) pour interagir avec cette application en langage naturel.
+- créer une petite application Java Spring Boot de gestion de tâches ;
+- y ajouter Spring AI MCP pour exposer des **tools MCP** ;
+- démarrer un serveur MCP en SSE ;
+- connecter ce serveur dans VS Code ;
+- utiliser GitHub Copilot pour appeler ces tools en langage naturel.
 
-Ce labo montre comment transformer une application Java en **outil utilisable par Copilot**, et comment les développeurs peuvent tirer parti de MCP avec surtout de la **configuration** plutôt que du développement spécifique côté Copilot.
+L’objectif est de montrer la différence entre :
 
-> Remarque : le code Java reste volontairement simple. Le focus pédagogique est sur la **configuration MCP dans VS Code** et l’usage côté développeur.
+- “Copilot écrit du code”  
+et  
+- “Copilot invoque des fonctionnalités métier réelles via MCP”.
 
 ---
 
-## 1. Pré-requis
+## 1. Pré‑requis
 
-Avant de commencer, assurez-vous d’avoir :
+Avant de commencer :
 
-- Visual Studio Code à jour, avec :
-  - GitHub Copilot,
-  - le mode Agent activé,
-  - le support MCP (MCP servers) disponible.
-- Un abonnement GitHub Copilot actif.
+- Visual Studio Code à jour.
+- Extension GitHub Copilot installée et connectée.
+- GitHub Copilot avec **Agent mode + support MCP** disponibles.
 - Java 17 ou plus (JDK).
-- Maven installé et accessible dans le `PATH`.
-- Extensions Java pour VS Code, par exemple :
-  - “Extension Pack for Java”.
+- Maven installé (`mvn -v` doit fonctionner).
+- Extensions Java pour VS Code (par exemple “Extension Pack for Java”).
 - Connaissances de base :
   - Java,
-  - HTTP/REST,
-  - usage basique de Git et Maven.
+  - Spring Boot,
+  - REST,
+  - Maven.
 
 ---
 
-## 2. Créer l’application Java minimale
+## 2. Créer le projet Java Spring Boot
 
-Dans cette partie, vous créez une petite application Java Spring Boot qui expose une API REST “Todo” très simple, que Copilot utilisera ensuite via MCP.
+### 2.1. Créer le workspace
 
-### 2.1. Créer le dossier de travail
+Dans un terminal :
 
-1. Ouvrez un terminal.
-2. Créez un nouveau dossier et initialisez Git :
-
-   ```bash
-   mkdir mcp-java-lab
-   cd mcp-java-lab
-   git init
-   ```
-
-3. Ouvrez le dossier dans VS Code :
-
-   ```bash
-   code .
-   ```
-
-### 2.2. Générer un projet Spring Boot minimal
-
-Vous pouvez passer par Spring Initializr (web) si vous préférez, mais ici on reste sur Maven CLI pour garder un script reproductible.
-
-1. Dans le terminal intégré VS Code, lancez :
-
-   ```bash
-   mvn archetype:generate \
-     -DgroupId=com.example \
-     -DartifactId=mcp-todo-app \
-     -DarchetypeArtifactId=maven-archetype-quickstart \
-     -DarchetypeVersion=1.5 \
-     -DinteractiveMode=false
-   ```
-
-2. Déplacez-vous dans le projet :
-
-   ```bash
-   cd mcp-todo-app
-   ```
-
-3. Ouvrez `pom.xml` et remplacez le contenu par un pom Spring Boot minimal :
-
-   ```xml
-   <?xml version="1.0" encoding="UTF-8"?>
-   <project xmlns="http://maven.apache.org/POM/4.0.0"
-            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-            xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
-       <modelVersion>4.0.0</modelVersion>
-
-       <groupId>com.example</groupId>
-       <artifactId>mcp-todo-app</artifactId>
-       <version>0.0.1-SNAPSHOT</version>
-       <packaging>jar</packaging>
-
-       <name>mcp-todo-app</name>
-
-       <parent>
-           <groupId>org.springframework.boot</groupId>
-           <artifactId>spring-boot-starter-parent</artifactId>
-           <version>3.2.5</version>
-           <relativePath/>
-       </parent>
-
-       <properties>
-           <java.version>17</java.version>
-       </properties>
-
-       <dependencies>
-           <dependency>
-               <groupId>org.springframework.boot</groupId>
-               <artifactId>spring-boot-starter-web</artifactId>
-           </dependency>
-
-           <dependency>
-               <groupId>org.springframework.boot</groupId>
-               <artifactId>spring-boot-starter-test</artifactId>
-               <scope>test</scope>
-           </dependency>
-       </dependencies>
-
-       <build>
-           <plugins>
-               <plugin>
-                   <groupId>org.springframework.boot</groupId>
-                   <artifactId>spring-boot-maven-plugin</artifactId>
-               </plugin>
-           </plugins>
-       </build>
-   </project>
-   ```
-
-4. Dans `src/main/java`, adaptez la structure de packages en créant :
-
-   ```text
-   src/main/java/com/example/mcp
-   ```
-
-5. Créez la classe `McpTodoApplication.java` :
-
-   ```java
-   package com.example.mcp;
-
-   import org.springframework.boot.SpringApplication;
-   import org.springframework.boot.autoconfigure.SpringBootApplication;
-
-   @SpringBootApplication
-   public class McpTodoApplication {
-
-       public static void main(String[] args) {
-           SpringApplication.run(McpTodoApplication.class, args);
-       }
-   }
-   ```
-
-### 2.3. Ajouter une API REST Todo très simple
-
-1. Créez `TodoController.java` :
-
-   ```java
-   package com.example.mcp;
-
-   import org.springframework.web.bind.annotation.*;
-
-   import java.util.ArrayList;
-   import java.util.List;
-   import java.util.concurrent.atomic.AtomicLong;
-
-   @RestController
-   @RequestMapping("/api/todos")
-   public class TodoController {
-
-       private final List<TodoItem> items = new ArrayList<>();
-       private final AtomicLong idGenerator = new AtomicLong(1);
-
-       @GetMapping
-       public List<TodoItem> listTodos() {
-           return items;
-       }
-
-       @PostMapping
-       public TodoItem createTodo(@RequestBody TodoItemRequest request) {
-           TodoItem item = new TodoItem();
-           item.setId(idGenerator.getAndIncrement());
-           item.setTitle(request.getTitle());
-           item.setCompleted(false);
-           items.add(item);
-           return item;
-       }
-
-       @PostMapping("/{id}/complete")
-       public TodoItem completeTodo(@PathVariable long id) {
-           return items.stream()
-               .filter(t -> t.getId() == id)
-               .findFirst()
-               .map(t -> {
-                   t.setCompleted(true);
-                   return t;
-               })
-               .orElseThrow(() -> new IllegalArgumentException("Todo not found: " + id));
-       }
-   }
-   ```
-
-2. Créez `TodoItem.java` :
-
-   ```java
-   package com.example.mcp;
-
-   public class TodoItem {
-       private long id;
-       private String title;
-       private boolean completed;
-
-       public long getId() {
-           return id;
-       }
-
-       public void setId(long id) {
-           this.id = id;
-       }
-
-       public String getTitle() {
-           return title;
-       }
-
-       public void setTitle(String title) {
-           this.title = title;
-       }
-
-       public boolean isCompleted() {
-           return completed;
-       }
-
-       public void setCompleted(boolean completed) {
-           this.completed = completed;
-       }
-   }
-   ```
-
-3. Créez `TodoItemRequest.java` :
-
-   ```java
-   package com.example.mcp;
-
-   public class TodoItemRequest {
-       private String title;
-
-       public String getTitle() {
-           return title;
-       }
-
-       public void setTitle(String title) {
-           this.title = title;
-       }
-   }
-   ```
-
-4. Testez rapidement l’application :
-
-   ```bash
-   mvn spring-boot:run
-   ```
-
-   - `GET http://localhost:8080/api/todos` doit renvoyer une liste vide.
-   - `POST http://localhost:8080/api/todos` avec `{ "title": "Préparer la démo MCP" }` doit créer une tâche.
-
-Si tout fonctionne, vous avez une petite API REST prête à être utilisée comme backend pour MCP.
-
----
-
-## 3. Comprendre MCP côté Copilot (contexte)
-
-Avant de configurer quoi que ce soit, resituons MCP :
-
-- **MCP (Model Context Protocol)** est un protocole standard qui permet à des modèles comme GitHub Copilot d’accéder à des **outils externes** (APIs, services, données) via une interface uniformisée.
-- Dans VS Code, Copilot peut utiliser des **MCP servers** : chaque serveur expose des “tools” que Copilot peut appeler depuis la vue Agents / Chat.
-- L’intérêt est de ne plus coder un plugin Copilot spécifique : une application Java existante peut devenir un outil accessible aux développeurs via Copilot.
-
-Dans ce labo, on va rester sur un flux **centré UI** :
-
-- ouvrir la vue Agents,
-- utiliser le bouton/icone pour configurer les MCP servers,
-- sans écrire à la main des fichiers de configuration complexes.
-
----
-
-## 4. Ajouter le serveur MCP dans VS Code (via l’interface)
-
-L’idée est d’enregistrer votre service Java en tant que MCP server dans VS Code, en passant par l’interface graphicale d’Agents.
-
-> Attention : selon la version de VS Code, les menus peuvent légèrement varier, mais la logique reste la même.
-
-### 4.1. Ouvrir la vue Agents / Copilot
-
-1. Assurez-vous que votre application Java tourne toujours dans un terminal (`mvn spring-boot:run`).
-2. Dans VS Code, ouvrez le panneau GitHub Copilot / Chat.
-3. Basculez en **Agent mode** si ce n’est pas déjà le cas (via le sélecteur de mode dans la zone de saisie).
-4. Cliquez sur l’icône ou le lien **Open in Agents** (ou équivalent) pour ouvrir la vue dédiée aux agents et aux outils (MCP inclus).
-
-### 4.2. Ajouter un MCP server sans éditer de JSON à la main
-
-1. Dans la vue Agents, repérez le bouton ou menu associé aux outils, par exemple une icône d’engrenage ou de clé à molette, proche de “Tools”.
-2. Cliquez dessus et cherchez une option du type :
-
-   - “Ajouter plus d’outils…”
-   - puis “Ajouter un serveur MCP”,
-   - ou “MCP: Add Server”.
-
-3. Quand l’assistant vous le propose, choisissez le **type** de serveur :
-
-   - HTTP / SSE (HTTP ou Server-Sent Events), si vous avez un endpoint MCP HTTP,
-   - ou Command (stdio) si vous lancez un serveur MCP en local via une commande.
-
-4. Dans ce labo, l’idée est de montrer le flux UI, donc vous pouvez :
-
-   - soit utiliser un starter MCP Java/Spring Alert déjà fourni (si disponible dans votre environnement),
-   - soit simplement simuler un serveur MCP en suivant un exemple existant (par exemple un starter Spring AI MCP).
-
-Si vous utilisez un starter qui expose un endpoint du type :
-
-```text
-http://localhost:8080/sse
+```bash
+mkdir mcp-java-lab
+cd mcp-java-lab
+git init
+code .
 ```
 
-alors :
+### 2.2. Générer le projet Spring Boot
 
-- renseignez cette URL comme **URL du serveur**,
-- donnez un **nom/ID de serveur** parlant, par exemple `java-todo-mcp`,
-- choisissez de sauvegarder la configuration au **niveau workspace**, ce qui créera un `.vscode/mcp.json` sans que vous ayez à le modifier.
+Vous pouvez utiliser Spring Initializr (site web) ou la CLI. Pour rester scriptable, on suppose que le projet a :
 
-5. Validez. VS Code va alors :
+- Group: `com.example`
+- Artifact: `task-mcp-app`
+- Type: Maven
+- Java: 17
+- Dépendances :
+  - Spring Web
 
-- enregistrer ce serveur MCP,
-- l’afficher dans la liste des serveurs disponibles pour les agents,
-- et vous demander, lors du premier appel, de confirmer les permissions.
-
----
-
-## 5. Utiliser le serveur MCP depuis Copilot (focus sur l’UI)
-
-Maintenant que le serveur MCP est configuré, vous allez l’utiliser directement depuis Copilot, en langage naturel.
-
-### 5.1. Vérifier que le serveur MCP est actif
-
-1. Dans la vue Agents / Chat :
-
-   - assurez-vous d’être en **Agent mode**,
-   - ouvrez le sélecteur de “Tools” (outils) associé à la zone de saisie.
-
-2. Vérifiez que votre serveur, par exemple `java-todo-mcp`, est listé parmi les MCP servers :
-
-   - si ce n’est pas le cas, vérifiez que :
-     - l’application Java tourne,
-     - la configuration MCP a bien été enregistrée,
-     - vous êtes dans le bon workspace.
-
-3. Activez les outils de ce serveur pour la session courante (case à cocher ou équivalent).
-
-### 5.2. Scénarios de requêtes naturelles
-
-Dans la zone de saisie de Copilot (Agent mode) :
-
-1. Envoyez une première requête :
-
-   ```text
-   Utilise le serveur MCP \"java-todo-mcp\" pour lister toutes les tâches disponibles.
-   ```
-
-2. Observez le comportement :
-
-   - Copilot devrait détecter qu’il doit appeler le tool MCP associé,
-   - exécuter un appel vers votre serveur,
-   - et afficher la réponse (une liste de tâches, souvent un tableau JSON ou équivalent formaté).
-
-3. Créez une nouvelle tâche :
-
-   ```text
-   Crée une nouvelle tâche via le serveur MCP \"java-todo-mcp\" avec le titre \"Préparer le rapport de sprint\".
-   ```
-
-4. Vérifiez ensuite l’état :
-
-   ```text
-   Affiche à nouveau la liste des tâches via le serveur MCP \"java-todo-mcp\".
-   ```
-
-5. Marquez une tâche comme terminée :
-
-   ```text
-   Marque la tâche avec l'identifiant 1 comme terminée en utilisant le serveur MCP \"java-todo-mcp\".
-   ```
-
-Le but est que les stagiaires perçoivent bien :
-
-- qu’ils ne tapent aucune commande HTTP ou curl,
-- qu’ils pilotent un service Java via Copilot et MCP,
-- et que tout cela se fait depuis la même interface de chat.
+Placez‑vous dans le dossier du projet (par ex. `task-mcp-app`) avant de continuer.
 
 ---
 
-## 6. Discussion : pourquoi MCP est utile pour une équipe Java
+## 3. Configurer Maven et Spring AI MCP
 
-Prenez quelques minutes pour discuter (ou faire réfléchir les participants) sur les points suivants :
+Nous allons :
 
-- En quoi ce pattern est différent d’un simple “client HTTP + API REST” ?
-- Quels types de services internes d’une entreprise Java pourraient être exposés via MCP :
-  - référentiels internes,
-  - systèmes de tickets,
-  - services de configuration,
-  - monitoring, etc. ?
-- Quels gains pour :
-  - les développeurs,
-  - les SRE / ops,
-  - le support ?
+- ajouter Spring AI MCP server pour WebMVC (SSE),
+- préparer la structure de code.
 
-L’idée à faire passer :
+### 3.1. Mettre à jour `pom.xml`
 
-- MCP permet de **factoriser l’intégration** d’un service interne : une fois exposé, il devient disponible pour tous les agents Copilot, dans VS Code, sans recoder une intégration pour chaque équipe.
-- Les développeurs peuvent rester dans leur IDE, en bénéficiant d’un assistant qui sait parler à leurs outils internes.
+Ouvrez `pom.xml` et ajustez le contenu comme suit (simplifié pour le labo) :
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.example</groupId>
+    <artifactId>task-mcp-app</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <packaging>jar</packaging>
+
+    <name>task-mcp-app</name>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.2.5</version>
+        <relativePath/>
+    </parent>
+
+    <properties>
+        <java.version>17</java.version>
+        <!-- Adaptez la version de Spring AI à votre environnement -->
+        <spring-ai.version>1.0.0</spring-ai.version>
+    </properties>
+
+    <dependencies>
+        <!-- Web MVC classique -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <!-- MCP Server Spring AI (SSE + WebMVC) -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-starter-mcp-server-webmvc</artifactId>
+            <version>${spring-ai.version}</version>
+        </dependency>
+
+        <!-- Tests -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+</project>
+```
+
+> Adaptation : dans un environnement d’entreprise, on utilisera souvent un BOM Spring AI. Pour un labo, garder `spring-ai.version` dans `<properties>` suffit.
 
 ---
 
-## 7. Nettoyage
+## 4. Modèle et service Java
 
-Si ce labo est réalisé sur un environnement temporaire :
+Nous allons coder une petite gestion de tâches en mémoire.
 
-1. Arrêtez l’application Java :
+### 4.1. Structure de packages
 
-   - dans le terminal où tourne `mvn spring-boot:run`, tapez `Ctrl+C`.
+Créez la structure :
 
-2. Fermez VS Code si vous avez terminé.
+```text
+src/main/java/com/example/taskmcp/
+  TaskMcpApplication.java
+  model/Task.java
+  service/TaskService.java
+```
 
-3. Supprimez le dossier `mcp-java-lab` si vous n’en avez plus besoin.
+### 4.2. Application principale
 
-4. Dans VS Code, vous pouvez supprimer le serveur MCP configuré si vous ne voulez plus qu’il apparaisse dans la liste (via la même interface “Tools / MCP servers”).
+`TaskMcpApplication.java` :
+
+```java
+package com.example.taskmcp;
+
+import com.example.taskmcp.service.TaskService;
+import org.springframework.ai.mcp.server.tool.ToolCallbackProvider;
+import org.springframework.ai.tool.MethodToolCallbackProvider;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.Bean;
+
+@SpringBootApplication
+public class TaskMcpApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(TaskMcpApplication.class, args);
+    }
+
+    // Enregistrer les méthodes @Tool du service comme tools MCP
+    @Bean
+    public ToolCallbackProvider mcpTools(TaskService taskService) {
+        return MethodToolCallbackProvider.builder()
+                .toolObjects(taskService)
+                .build();
+    }
+}
+```
+
+### 4.3. Modèle `Task`
+
+`model/Task.java` :
+
+```java
+package com.example.taskmcp.model;
+
+public class Task {
+
+    private Long id;
+    private String title;
+    private boolean completed;
+
+    public Task(Long id, String title, boolean completed) {
+        this.id = id;
+        this.title = title;
+        this.completed = completed;
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public boolean isCompleted() {
+        return completed;
+    }
+
+    public void setCompleted(boolean completed) {
+        this.completed = completed;
+    }
+}
+```
+
+### 4.4. Service `TaskService` (avec annotations MCP)
+
+`service/TaskService.java` :
+
+```java
+package com.example.taskmcp.service;
+
+import com.example.taskmcp.model.Task;
+import org.springframework.ai.tool.annotation.Tool;
+import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
+
+@Service
+public class TaskService {
+
+    private final List<Task> tasks = new ArrayList<>();
+    private final AtomicLong counter = new AtomicLong(1);
+
+    @Tool(
+        name = "list_tasks",
+        description = "Liste toutes les tâches existantes."
+    )
+    public List<Task> listTasksTool() {
+        return tasks;
+    }
+
+    @Tool(
+        name = "create_task",
+        description = "Crée une nouvelle tâche avec un titre fourni."
+    )
+    public Task createTaskTool(String title) {
+        Task task = new Task(counter.getAndIncrement(), title, false);
+        tasks.add(task);
+        return task;
+    }
+
+    @Tool(
+        name = "complete_task",
+        description = "Marque une tâche comme terminée à partir de son identifiant."
+    )
+    public Task completeTaskTool(Long id) {
+        return tasks.stream()
+                .filter(task -> task.getId().equals(id))
+                .findFirst()
+                .map(task -> {
+                    task.setCompleted(true);
+                    return task;
+                })
+                .orElseThrow(() -> new IllegalArgumentException("Task not found: " + id));
+    }
+
+    @Tool(
+        name = "task_summary",
+        description = "Retourne un résumé du nombre total, terminé et ouvert de tâches."
+    )
+    public String taskSummaryTool() {
+        long total = tasks.size();
+        long completed = tasks.stream().filter(Task::isCompleted).count();
+        long open = total - completed;
+        return "Total=" + total + ", completed=" + completed + ", open=" + open;
+    }
+}
+```
+
+> Les annotations `@Tool` indiquent quelles méthodes doivent être exposées comme **tools MCP**.  
+> Le bean `mcpTools` dans `TaskMcpApplication` enregistre ces méthodes auprès du serveur MCP Spring AI.
 
 ---
 
-## Récapitulatif
+## 5. Configuration Spring Boot / MCP
 
-Dans ce labo, vous avez :
+### 5.1. Fichier `application.yml`
 
-- Créé une petite application Java Spring Boot avec une API REST Todo.
-- Enregistré cette application comme **serveur MCP** dans VS Code en utilisant principalement l’interface (Open in Agents, ajout de MCP servers).
-- Utilisé GitHub Copilot pour appeler votre application en langage naturel, sans écrire de code spécifique côté Copilot.
-- Compris comment MCP permet d’exposer des services Java existants comme outils standardisés pour les agents Copilot.
+Créez `src/main/resources/application.yml` :
 
-Ce modèle est réutilisable dans vos projets : toute application Java exposée via MCP peut devenir un composant accessible et orchestrable par Copilot, pour construire de véritables workflows d’ingénierie augmentée.
+```yaml
+spring:
+  application:
+    name: task-mcp-app
+  ai:
+    mcp:
+      server:
+        enabled: true
+        protocol: SSE
+        name: task-mcp-server
+        version: 1.0.0
+        # selon la version, ces propriétés peuvent exister :
+        # sse-message-endpoint: /sse
+```
+
+> Selon la version du starter, l’endpoint SSE par défaut est souvent `/sse` sur le port 8080.  
+> Si besoin, on peut forcer un chemin via `sse-message-endpoint`.
+
+### 5.2. Démarrer l’application
+
+Dans le terminal :
+
+```bash
+mvn clean package
+mvn spring-boot:run
+```
+
+- Vérifiez que l’application démarre sans erreur.
+- Si vous testez `http://localhost:8080/actuator/health`, vous devriez voir un statut `UP` (si vous avez activé Actuator).
+
+---
+
+## 6. Ajouter le serveur MCP dans VS Code / GitHub Copilot
+
+L’idée maintenant est de dire à VS Code : “il existe un serveur MCP à `http://localhost:8080/sse` nommé `task-mcp-server`”.
+
+### 6.1. Ouvrir Agent mode
+
+1. Assurez‑vous que l’application tourne encore (`mvn spring-boot:run`).
+2. Dans VS Code, ouvrez **GitHub Copilot Chat**.
+3. Passez en **Agent mode**.
+4. Cliquez sur **Open in Agents** (ou l’équivalent) pour ouvrir la vue Agents / Tools / MCP servers.
+
+### 6.2. Ajouter le serveur MCP via l’UI
+
+1. Dans la vue Agents, repérez la section **Tools** ou **MCP servers**.
+2. Cliquez sur un bouton de type :
+   - “Add more tools…”
+   - puis “Add MCP server” / “MCP: Add Server”.
+3. Choisissez le type **HTTP / SSE**.
+4. Renseignez :
+   - Name / ID : `task-mcp-server`
+   - URL : `http://localhost:8080/sse` (ou l’URL indiquée par votre version de Spring AI).
+5. Sauvegardez au niveau **workspace**.
+
+VS Code devrait créer/mettre à jour un fichier `.vscode/mcp.json` avec une entrée pour `task-mcp-server`.
+
+### 6.3. Vérifier la découverte des tools
+
+Dans Copilot Chat :
+
+1. Assurez‑vous que `task-mcp-server` est coché/activé comme source d’outils pour la session.
+2. Demandez :
+
+   ```text
+   Liste les outils disponibles sur le serveur MCP "task-mcp-server".
+   ```
+
+Vous devriez voir au moins :
+
+- `list_tasks`
+- `create_task`
+- `complete_task`
+- `task_summary`
+
+Si vous voyez “discovered zero tools”, la cause est généralement :
+
+- le starter MCP n’est pas chargé,
+- les méthodes ne sont pas annotées `@Tool`,
+- ou le bean `ToolCallbackProvider` n’est pas présent.
+
+---
+
+## 7. Utiliser GitHub Copilot pour appeler les tools Java
+
+Quelques prompts type à utiliser dans le chat (en s’assurant que le serveur MCP est actif et autorisé) :
+
+```text
+Utilise le serveur MCP "task-mcp-server" pour créer une tâche intitulée
+"Préparer la revue de sprint".
+```
+
+```text
+Utilise les outils MCP pour lister toutes les tâches.
+```
+
+```text
+Utilise le serveur MCP pour marquer la tâche avec l'id 1 comme terminée.
+```
+
+```text
+Donne-moi un résumé de l'état des tâches (total, terminées, ouvertes)
+en appelant l'outil MCP approprié.
+```
+
+Pendant ces interactions, observez que :
+
+- Copilot interprète la demande,
+- choisit le tool MCP correspondant (`create_task`, `list_tasks`, etc.),
+- appelle l’app Java via MCP,
+- et revient avec le résultat structuré + un texte explicatif.
+
+---
+
+## 8. Extensions possibles (facultatif)
+
+Pour aller plus loin :
+
+- Ajouter un tool `delete_task(Long id)` et le tester via Copilot.
+- Introduire des validations (titre obligatoire, longueur max) et voir comment Copilot gère les erreurs.
+- Remplacer la liste en mémoire par une base H2 ou un repository Spring Data.
+- Discuter des aspects de sécurité (auth, permissions, logs) quand on expose des tools internes via MCP.
+
+---
+
+## 9. Points de débrief pour le formateur
+
+Questions possibles en fin de lab :
+
+- Qu’est‑ce qui change par rapport à un usage “Copilot = autocomplétion de code” ?
+- Quels types de services Java internes pourraient être exposés comme tools MCP dans votre SI ?
+- Quels risques / questions de gouvernance cela soulève (droits, secrets, audit) ?
+- Comment combiner agents Copilot + MCP servers dans une architecture globale ?
+
+Ce labo montre qu’une équipe Java peut transformer une simple application Spring Boot en **outil standardisé** pour GitHub Copilot, sans écrire de plugin spécifique, simplement en ajoutant Spring AI MCP et quelques annotations.
