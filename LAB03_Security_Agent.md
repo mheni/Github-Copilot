@@ -57,9 +57,9 @@ In this section, you create a simple Java web-like project that the Security Rev
 
    ```bash
    mvn archetype:generate \
-  -DarchetypeGroupId=org.apache.maven.archetypes \
-  -DarchetypeArtifactId=maven-archetype-quickstart \
-  -DarchetypeVersion=1.5
+    -DarchetypeGroupId=org.apache.maven.archetypes \
+    -DarchetypeArtifactId=maven-archetype-quickstart \
+    -DarchetypeVersion=1.5
    ```
 
 2. Move into the project directory:
