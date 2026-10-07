@@ -1,4 +1,4 @@
-# LAB 08 - Refactoriser les grandes fonctions avec GitHub Copilot (Java)
+# LAB 06 - Refactoriser les grandes fonctions avec GitHub Copilot (Java)
 
 ## Description
 Apprendre à identifier et refactoriser les méthodes trop longues en méthodes plus petites, cohérentes et testables avec l'aide de GitHub Copilot.
