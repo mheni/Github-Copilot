@@ -1,6 +1,6 @@
 ---
 lab 02:
-  title: "Exercise - Create and use a Unit Tester Agent with GitHub Copilot in VS Code (Java)"
+  title: "LAB 02 - Create and use a Unit Tester Agent with GitHub Copilot in VS Code (Java)"
   description: "Create a custom GitHub Copilot agent specialized in unit testing, configure it in VS Code, and use it to generate and validate JUnit 5 tests for a Java project."
   duration: "45-60 minutes"
 ---
