@@ -1,5 +1,5 @@
 ---
-lab:
+lab 05:
   title: "Labo - Documenter et moderniser un module Java avec GitHub Copilot"
   description: "Utiliser GitHub Copilot dans VS Code pour comprendre, documenter, refactorer et tester un module Java existant, sans agents ni MCP."
   duration: "60-90 minutes"
