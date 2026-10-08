@@ -317,15 +317,16 @@ spring:
     mcp:
       server:
         enabled: true
-        protocol: SSE
+        type: SYNC
+        protocol: STREAMABLE
         name: task-mcp-server
         version: 1.0.0
-        # selon la version, ces propriétés peuvent exister :
-        # sse-message-endpoint: /sse
+        streamable-http:
+          mcp-endpoint: /mcp
 ```
 
-> Selon la version du starter, l’endpoint SSE par défaut est souvent `/sse` sur le port 8080.  
-> Si besoin, on peut forcer un chemin via `sse-message-endpoint`.
+> Selon la version du starter, l’endpoint MCP par défaut est souvent `/mcp` sur le port 8080.  
+
 
 ### 5.2. Démarrer l’application
 
