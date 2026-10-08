@@ -101,14 +101,14 @@ Ouvrez `pom.xml` et ajustez le contenu comme suit (simplifié pour le labo) :
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.2.5</version>
+        <version>3.5.15</version>
         <relativePath/>
     </parent>
 
     <properties>
         <java.version>17</java.version>
         <!-- Adaptez la version de Spring AI à votre environnement -->
-        <spring-ai.version>1.0.0</spring-ai.version>
+        <spring-ai.version>1.1.8</spring-ai.version>
     </properties>
 
     <dependencies>
