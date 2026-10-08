@@ -362,7 +362,7 @@ L’idée maintenant est de dire à VS Code : “il existe un serveur MCP à `ht
 3. Choisissez le type **HTTP / SSE**.
 4. Renseignez :
    - Name / ID : `task-mcp-server`
-   - URL : `http://localhost:8080/sse` (ou l’URL indiquée par votre version de Spring AI).
+   - URL : `http://localhost:8080/mcp` (ou l’URL indiquée par votre version de Spring AI).
 5. Sauvegardez au niveau **workspace**.
 
 VS Code devrait créer/mettre à jour un fichier `.vscode/mcp.json` avec une entrée pour `task-mcp-server`.
